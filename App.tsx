@@ -6,7 +6,6 @@ import Navigation from './navigation';
 
 export default function App() {
   const isLoadingComplete = useCachedResources();
-
   return (!isLoadingComplete) ? null : 
     (<SafeAreaProvider>
         <Navigation />

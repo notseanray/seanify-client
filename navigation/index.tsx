@@ -20,17 +20,42 @@ import { MMKV } from "react-native-mmkv";
 export const storage = new MMKV();
 
 const storedTheme = storage.getString("theme");
+const username = storage.getString("username");
+const password = storage.getString("password");
+const authed = storage.getBoolean("authed");
 export const ws_address = storage.getString("ws");
+
+export function logout() {
+	storage.delete("username");
+	storage.delete("password");
+	storage.delete("authed");
+	storage.delete("ws")
+}
 
 export function fetchString(key: string) {
 	return storage.getString(key);
 }
 
+export function resetWebsocket() {
+	storage.delete("ws");
+}
+
+export function setString(key: string, value: string) {
+	storage.set(key, value);
+}
+
+export function setBoolean(key: string, value: boolean) {
+	storage.set(key, value);
+}
+
 export const useStore = create(set => ({
-	theme: (storedTheme == null) ? useColorScheme().toString() : storedTheme,
+	theme: (storedTheme == null) ? "light" : storedTheme,
 	ws: (ws_address == null) ? "" : ws_address,
-	auth: false
-}))
+	show_signup: false,
+	authed: (authed == null || authed == undefined) ? false : authed,
+	username: (username == null || username == undefined) ? "" : username,
+	password: (password == null || password == undefined) ? "" : password
+}));
 
 export default function Navigation() {
 	// set the default theme based on the os theme
@@ -156,6 +181,7 @@ function BottomTabNavigator() {
 
 const styles = StyleSheet.create({
 	topButtons: {
+		userSelect: "none",
 	  flexDirection: "row",
 	  flexWrap: "wrap"
 	},
@@ -168,5 +194,5 @@ function TabBarIcon(props: {
 	name: React.ComponentProps<typeof FontAwesome>["name"];
 	color: string;
 }) {
-	return <FontAwesome size={30} style={{ marginBottom: -3 }} {...props} />;
+	return <FontAwesome size={30} style={{ paddingBottom: 3 }} {...props} />;
 }
