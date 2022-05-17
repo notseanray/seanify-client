@@ -7,37 +7,37 @@ import React, { useCallback, useEffect } from "react";
 import Spacer from "./Spacer";
 
 
-import { ws_address, useStore } from "../navigation/index";
-import useWebSocket, { ReadyState } from 'react-native-use-websocket';
+import { useStore } from "../navigation/index";
+import useWebSocket from 'react-native-use-websocket';
 
-function validateurl(url: string) {
-	const urlStringified = url.toString();
+function validateurl(urldata: string) {
+	const url = urldata.toString();
 	// advanced validation ofc
-	return (urlStringified.includes("ws") && urlStringified.includes("seanify") && urlStringified.includes("://"));
+	return (url.includes("ws") && url.includes("seanify") && url.includes("://"));
 }
 
-let messages = [];
+let messages: any[] | undefined = [];
 
 export default function LoginPopup() {
 	const [wsInput, wsText] = React.useState("");
 	const [username, usernameText] = React.useState("");
 	const [password, passwordText] = React.useState("");
-	const [usernameSignup, usernameTextSignup] = React.useState("");
-	const [passwordSignup, passwordTextSignup] = React.useState("");
 	const [instanceKey, instanceKeyText] = React.useState("");
 	
 	const websocketUrl = useStore(state => state.ws);
 
-	const authed: boolean = (fetchString("password") != undefined && fetchString("username") != undefined && useStore(state => state.authed) && websocketUrl != undefined);
+	const authed: boolean = !!(fetchString("password") && !!fetchString("username") && !!websocketUrl);
+
+	useStore.setState({ authed: authed });
 
 	const getSocketUrl = useCallback(() => {
 		return new Promise(resolve => {
 			setTimeout(() => {
-				console.log("url " + websocketUrl)
-				if (validateurl(websocketUrl)) {
+				if (validateurl(websocketUrl) && !authed) {
+					console.log("url " + websocketUrl)
 					resolve(websocketUrl);
 				}
-			}, 1000);
+			}, 500);
 		});
 	}, [useStore(state => state.ws)]);
 
@@ -46,30 +46,25 @@ export default function LoginPopup() {
 		lastMessage,
 		readyState,
 		getWebSocket
-	} = useWebSocket(getSocketUrl);
+	} = useWebSocket(getSocketUrl, {
+		onOpen: () => console.log("opened connection to: " + websocketUrl),
+		shouldReconnect: (closeEvent) => true,
+	});
 
 	useEffect(() => {
-		messages.push(lastMessage.data);
+		if (lastMessage != undefined) {
+			messages.push(lastMessage.data);
+		}
 		console.log(messages)
-		if (messages != undefined && messages.length > 1 && messages[messages.length - 1] == "PONG") {
+		let currently_authed = false;
+		if (!!messages && messages.length > 1 && messages[messages.length - 1] == "PONG") {
 			console.log("authed")
-			setBoolean("authed", true);
 			setString("ws", websocketUrl);
-			useStore.setState({ authed: true })
+			currently_authed = true;
 		}
+		setBoolean("authed", currently_authed);
+		useStore.setState({ authed: currently_authed })
 	}, [lastMessage])
-
-	// log in at first render
-	console.log("asds url " + websocketUrl)
-	useEffect(() => {
-		if (!!fetchString("username") && !!fetchString("password") && !!websocketUrl && fetchString("username") != "" && fetchString("password") != "" && websocketUrl.length > 2) {
-			console.log("attempting auth")
-			sendMessage(`AUTH ${username} ${password}`);
-			sendMessage("PING ")
-			setString("username", username);
-			setString("password", password);
-		}
-	}, []);
 
 	return (authed) ? (<></>) : (
 		<View style={styles.wrapper}>
@@ -98,16 +93,18 @@ export default function LoginPopup() {
 					value={password}
 				/>
 				<Pressable
-					disabled={(wsText == undefined || usernameText == undefined || passwordText == undefined)}
+					disabled={!(!!wsInput && !!username && !!password && validateurl(wsInput))}
 					style={styles.loginButton}
 					onPress={() => {
+						console.log(username + " " + password);
+						useStore.setState({ ws: wsInput });
 						if (!authed) {
 							sendMessage(`AUTH ${username} ${password}`);
 							sendMessage("PING ")
 						}
-						useStore.setState({ ws: wsInput })
 						console.log("sent")
-						if (username != undefined && password != undefined) {
+						if (!!username && !!password) {
+							setBoolean("authed", true);
 							setString("username", username);
 							setString("password", password);
 						}
@@ -137,22 +134,24 @@ export default function LoginPopup() {
 				<Text style={styles.text}>username</Text>
 				<TextInput
 					style={styles.input}
-					onChangeText={usernameTextSignup}
-					value={usernameSignup}
+					onChangeText={usernameText}
+					value={username}
 				/>
 				<Text style={styles.text}>password</Text>
 				<TextInput
 					style={styles.input}
-					onChangeText={passwordTextSignup}
-					value={passwordSignup}
+					onChangeText={passwordText}
+					value={password}
 				/>
 				<Pressable
-					disabled={(wsText == undefined || instanceKeyText == undefined || usernameText == undefined || passwordText == undefined)}
+					disabled={!(!!wsText || !!instanceKeyText || !!usernameText || !!passwordText)}
 					style={styles.loginButton}
 					onPress={() => {
 						setString("ws", wsInput)
-						useStore.setState({ ws: wsInput })
+						//useStore.setState({ ws: wsInput })
 						console.log("sent sign")
+						console.log(readyState)
+						console.log(`SIGN ${username} ${password} ${instanceKey}`)
 						sendMessage(`SIGN ${username} ${password} ${instanceKey}`);
 						sendMessage("PING ")
 						setString("username", username);

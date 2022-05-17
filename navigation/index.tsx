@@ -16,6 +16,7 @@ import useColorScheme from '../hooks/useColorScheme';
 
 import create from "zustand"
 import { MMKV } from "react-native-mmkv";
+import RNRestart from "react-native-restart";
 
 export const storage = new MMKV();
 
@@ -28,8 +29,9 @@ export const ws_address = storage.getString("ws");
 export function logout() {
 	storage.delete("username");
 	storage.delete("password");
-	storage.delete("authed");
-	storage.delete("ws")
+	storage.set("authed", false);
+	RNRestart.Restart();
+	//storage.delete("ws")
 }
 
 export function fetchString(key: string) {
