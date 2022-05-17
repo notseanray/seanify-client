@@ -13,7 +13,7 @@ import useWebSocket from 'react-native-use-websocket';
 function validateurl(urldata: string) {
 	const url = urldata.toString();
 	// advanced validation ofc
-	return (url.includes("ws") && url.includes("seanify") && url.includes("://"));
+	return (url.includes("ws") && url.includes("://"));
 }
 
 let messages: any[] | undefined = [];
@@ -35,7 +35,7 @@ export default function LoginPopup() {
 			setTimeout(() => {
 				if (validateurl(websocketUrl) && !authed) {
 					console.log("url " + websocketUrl)
-					resolve(websocketUrl);
+					resolve(websocketUrl + "seanify");
 				}
 			}, 500);
 		});
@@ -48,12 +48,12 @@ export default function LoginPopup() {
 		getWebSocket
 	} = useWebSocket(getSocketUrl, {
 		onOpen: () => console.log("opened connection to: " + websocketUrl),
-		shouldReconnect: (closeEvent) => true,
+		shouldReconnect: (_) => true,
 	});
 
 	useEffect(() => {
 		if (lastMessage != undefined) {
-			messages.push(lastMessage.data);
+			messages?.push(lastMessage.data);
 		}
 		console.log(messages)
 		let currently_authed = false;
@@ -96,13 +96,11 @@ export default function LoginPopup() {
 					disabled={!(!!wsInput && !!username && !!password && validateurl(wsInput))}
 					style={styles.loginButton}
 					onPress={() => {
-						console.log(username + " " + password);
 						useStore.setState({ ws: wsInput });
 						if (!authed) {
 							sendMessage(`AUTH ${username} ${password}`);
 							sendMessage("PING ")
 						}
-						console.log("sent")
 						if (!!username && !!password) {
 							setBoolean("authed", true);
 							setString("username", username);
@@ -156,6 +154,7 @@ export default function LoginPopup() {
 						sendMessage("PING ")
 						setString("username", username);
 						setString("password", password);
+						setString("instance_key", instanceKey);
 					}}>
 					<Text style={styles.text}>submit</Text>
 				</Pressable>

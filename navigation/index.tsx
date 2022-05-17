@@ -10,7 +10,7 @@ import Colors from "../constants/Colors";
 import ProfileScreen from "../screens/Profile";
 import PlaylistsScreen from "../screens/Playlist";
 import BrowseScreen from "../screens/Browse";
-import { RootStackParamList, PlaylistsParamList, RootTabScreenProps } from "../types";
+import { RootStackParamList, RootTabScreenProps } from "../types";
 import LinkingConfiguration from "./LinkingConfiguration";
 import useColorScheme from '../hooks/useColorScheme';
 
@@ -184,8 +184,8 @@ function BottomTabNavigator() {
 const styles = StyleSheet.create({
 	topButtons: {
 		userSelect: "none",
-	  flexDirection: "row",
-	  flexWrap: "wrap"
+		flexDirection: "row",
+		flexWrap: "wrap"
 	},
   });
 
