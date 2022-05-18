@@ -1,5 +1,5 @@
 import { FontAwesome } from "@expo/vector-icons";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { BottomTabBar, createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import * as React from "react";
@@ -17,6 +17,7 @@ import useColorScheme from '../hooks/useColorScheme';
 import create from "zustand"
 import { MMKV } from "react-native-mmkv";
 import RNRestart from "react-native-restart";
+import { PlayBar } from "../components/PlayBar";
 
 export const storage = new MMKV();
 
@@ -31,7 +32,6 @@ export function logout() {
 	storage.delete("password");
 	storage.set("authed", false);
 	RNRestart.Restart();
-	//storage.delete("ws")
 }
 
 export function fetchString(key: string) {
@@ -42,11 +42,15 @@ export function resetWebsocket() {
 	storage.delete("ws");
 }
 
-export function setString(key: string, value: string) {
+export function setValue(key: string, value: any) {
 	storage.set(key, value);
 }
 
 export function setBoolean(key: string, value: boolean) {
+	storage.set(key, value);
+}
+
+export function setNumber(key: string, value: number) {
 	storage.set(key, value);
 }
 
@@ -56,7 +60,8 @@ export const useStore = create(set => ({
 	show_signup: false,
 	authed: (authed == null || authed == undefined) ? false : authed,
 	username: (username == null || username == undefined) ? "" : username,
-	password: (password == null || password == undefined) ? "" : password
+	password: (password == null || password == undefined) ? "" : password,
+	playing: false
 }));
 
 export default function Navigation() {
@@ -92,11 +97,7 @@ function RootNavigator() {
 
 function invertTheme(theme: String) {
 	let new_theme: String = theme;
-	if (theme == "dark") {
-		new_theme = "light";
-	} else {
-		new_theme = "dark";
-	}
+	new_theme = (theme == "dark") ? "light" : "dark";
 	storage.set("theme", new_theme.toString());
 	useStore.setState({theme: new_theme});
 }
@@ -105,7 +106,8 @@ const BottomTab = createBottomTabNavigator<RootTabParamList>();
 
 function BottomTabNavigator() {
 	const colorScheme: String = useStore(state => state.theme);
-	return (
+	return (<>
+		<PlayBar />
 		<BottomTab.Navigator
 			initialRouteName="Playlists"
 			screenOptions={{
@@ -178,7 +180,7 @@ function BottomTabNavigator() {
 				})}
 			/>
 		</BottomTab.Navigator>
-	);
+	</>);
 }
 
 const styles = StyleSheet.create({

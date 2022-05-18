@@ -1,6 +1,6 @@
 import { StyleSheet, TextInput, Pressable, Button, FlatList } from "react-native";
 
-import { resetWebsocket, setBoolean, setString } from "../navigation/index";
+import { resetWebsocket, setBoolean, setValue } from "../navigation/index";
 import { Text, View } from "../components/Themed";
 import { fetchString } from "../navigation/index";
 import React, { useCallback, useEffect } from "react";
@@ -35,7 +35,7 @@ export default function LoginPopup() {
 			setTimeout(() => {
 				if (validateurl(websocketUrl) && !authed) {
 					console.log("url " + websocketUrl)
-					resolve(websocketUrl + "seanify");
+					resolve(websocketUrl + "/seanify");
 				}
 			}, 500);
 		});
@@ -59,7 +59,7 @@ export default function LoginPopup() {
 		let currently_authed = false;
 		if (!!messages && messages.length > 1 && messages[messages.length - 1] == "PONG") {
 			console.log("authed")
-			setString("ws", websocketUrl);
+			setValue("ws", websocketUrl);
 			currently_authed = true;
 		}
 		setBoolean("authed", currently_authed);
@@ -68,7 +68,6 @@ export default function LoginPopup() {
 
 	return (authed) ? (<></>) : (
 		<View style={styles.wrapper}>
-
 			<View style={styles.container}>
 				<Text style={styles.title}>login</Text>
 				<View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
@@ -103,8 +102,8 @@ export default function LoginPopup() {
 						}
 						if (!!username && !!password) {
 							setBoolean("authed", true);
-							setString("username", username);
-							setString("password", password);
+							setValue("username", username);
+							setValue("password", password);
 						}
 					}}
 				>
@@ -145,16 +144,16 @@ export default function LoginPopup() {
 					disabled={!(!!wsText || !!instanceKeyText || !!usernameText || !!passwordText)}
 					style={styles.loginButton}
 					onPress={() => {
-						setString("ws", wsInput)
+						setValue("ws", wsInput)
 						//useStore.setState({ ws: wsInput })
 						console.log("sent sign")
 						console.log(readyState)
 						console.log(`SIGN ${username} ${password} ${instanceKey}`)
 						sendMessage(`SIGN ${username} ${password} ${instanceKey}`);
 						sendMessage("PING ")
-						setString("username", username);
-						setString("password", password);
-						setString("instance_key", instanceKey);
+						setValue("username", username);
+						setValue("password", password);
+						setValue("instance_key", instanceKey);
 					}}>
 					<Text style={styles.text}>submit</Text>
 				</Pressable>

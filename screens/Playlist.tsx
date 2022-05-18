@@ -4,14 +4,13 @@ import EditScreenInfo from '../components/EditScreenInfo';
 import { Text, View } from '../components/Themed';
 
 import LoginPopup from '../components/LoginPopup';
-import { fetchString, setString, useStore } from "../navigation/index";
+import { fetchString, setValue, useStore } from "../navigation/index";
 import React, { useState } from 'react';
-import { MaterialIcons } from '@expo/vector-icons';
 
 export default function PlaylistsScreen(props: any) {
   const [task, setTask] = useState();
   if (!!fetchString("lib_update")) {
-    setString("lib_update", "0");
+    setValue("lib_update", "0");
   }
   const handleAddTask = (value: any) => {
     props.addTask(value);

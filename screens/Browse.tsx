@@ -1,97 +1,147 @@
 import React, { useCallback, useEffect } from "react";
-import { Pressable, StyleSheet, Image, ScrollView } from "react-native";
+import { Pressable, StyleSheet, Image, ScrollView, TextInput } from "react-native";
 
 import { Text, View } from "../components/Themed";
 
-import { fetchString, setString } from "../navigation/index";
+import { fetchString, setValue } from "../navigation/index";
 
 import useWebSocket from "react-native-use-websocket";
 import { useStore } from "../navigation/index";
 import { useAudioPlayer } from "react-use-audio-player"
-import {Howl, Howler} from 'howler';
+import { Howl, Howler } from 'howler';
 
 let messages: any[] | undefined = [];
 let len = 0;
 let loaded = false;
 
-type Callback = (sound: Sound) => void;
-
-export class Sound {
-  static setCategory() {}
-  sound: Howl;
-
-  constructor(asset: string, error: (soundId: number, error: Error) => void) {
-    this.sound = new Howl({
-      src: [asset],
-      onloaderror: error,
-    });
+function formatDate(date: string) {
+  let month = "January";
+  switch (parseInt(date.substring(4, 6))) {
+    case 2:
+      month = "February"
+      break;
+    case 3:
+      month = "March"
+      break;
+    case 4:
+      month = "April"
+      break;
+    case 5:
+      month = "May"
+      break;
+    case 6:
+      month = "June"
+      break;
+    case 7:
+      month = "July"
+      break;
+    case 8:
+      month = "August"
+      break;
+    case 9:
+      month = "September"
+      break;
+    case 10:
+      month = "October"
+      break;
+    case 11:
+      month = "November"
+      break;
+    case 12:
+      month = "December"
+      break;
   }
-
-  play = async (callback?: Callback) => {
-    if (this.sound.state() !== 'loaded') {
-      return;
-    }
-    await this.sound.play();
-    if (callback) {
-      callback(this);
-    }
-  };
-
-  stop = async (callback?: Callback) => {
-    await this.sound.stop();
-    if (callback) {
-      callback(this);
-    }
-  };
+  return month + " " +
+    date.substring(6, 8).replace(/^[0]/g, "") + ", " +
+    date.substring(0, 4);
 }
 
 function SongsView() {
   let lib = fetchString("LIB");
   let data = (lib == null) ? "" : lib;
   if (data!.length <= 2) {
-      return (<></>);
+    return (<></>);
   }
   let music = JSON.parse(data);
   console.log(music);
   for (let i = 0; i < music.length; i++) {
     console.log(music[i].id.toString());
   }
+  // move to vol vol slider in playbar
+  Howler.volume(0.2);
+
+  // prevent rendering same song twice
+  let displayedIDs: String[] = [];
   return (
-      <>
-          {music.map(s => <SongBlock song={s} id={s.id.toString()} />)}
-      </>
+    <>
+      {music.map(s => <SongBlock song={s} id={s.id.toString()} IDlist={displayedIDs} />)}
+    </>
   );
 }
 
-function SongBlock({ song, id }: {song: { thumbnail: string, artist: string, upload_date: string }, id: string}) {
-  let artist = "";
+function SongBlock(
+  { song, id, IDlist }:
+    {
+      song:
+      {
+        title: string,
+        thumbnail: string,
+        artist: any,
+        creator: string,
+        uploader: string,
+        upload_date: string,
+        downloaded: boolean
+      },
+      id: string,
+      IDlist: string[]
+    }
+) {
+  if (IDlist.includes(id)) {
+    return (<></>);
+  }
+
+  IDlist.push(id);
+
+  // sometimes youtube can have the artist be null so we swap it out for other things just in case
+  let artist = song.artist;
+  if (!song.artist) {
+    if (!song.creator) {
+      artist = song.uploader;
+    } else {
+      artist = song.creator;
+    }
+  }
+
   let url = fetchString("ws");
-  return (<>
-        <Text style={styles.text}>{song.artist} {song.upload_date}</Text>
-        <Pressable
+  return (
+    <View className={styles.songContainer}>
+      <Pressable
         style={styles.songButton}
         onPress={() => {
-          Howler.volume(0.5);
           const sound = new Howl({
+            // fix the ws -> http 
+            // also account for wss -> http
             src: [url?.replace("ws", "http") + "/" + fetchString("instance_key") + "/" + id],
             format: "mp3"
           });
           sound.play();
         }}
       >
+        <Text style={styles.text}>{song.title}</Text>
+        <Text style={styles.text}>{artist} - {formatDate(song.upload_date)}</Text>
         <Image
           style={styles.img}
           source={{
             uri: song.thumbnail,
           }}
-      />
+        />
       </Pressable>
-  </>);
+    </View>);
 }
 
 export default function BrowseScreen() {
   const websocketUrl = useStore((state) => state.ws);
-  
+
   const authed: boolean = !!(
     fetchString("password") &&
     !!fetchString("username") &&
@@ -109,7 +159,7 @@ export default function BrowseScreen() {
     });
   }, []);
 
-  
+  const [queueUrl, queueText] = React.useState("");
 
   const { sendMessage, lastMessage, readyState, getWebSocket } = useWebSocket(
     getSocketUrl,
@@ -119,45 +169,65 @@ export default function BrowseScreen() {
     }
   );
   useEffect(() => {
-		if (lastMessage != undefined) {
-			messages!.push(lastMessage.data);
+    if (lastMessage != undefined) {
+      messages!.push(lastMessage.data);
       if (len != messages?.length) {
         if (!loaded) {
+          console.log("authed")
           sendMessage(`AUTH ${fetchString("username")} ${fetchString("password")}`);
         } else {
           let response = messages![messages!.length - 1];
           if (!!response) {
+            console.log(response)
             // validate this in the future
-            setString("LIB", response);
+            setValue("LIB", response);
           }
         }
       }
       len++;
-		}
-	}, [lastMessage, loaded])
+    }
+  }, [lastMessage, loaded])
   return (
     <ScrollView style={styles.scrollView} showsHorizontalScrollIndicator={false}>
-    <View style={styles.container}>
-      <Text style={styles.title}>Browse Media</Text>
-      <View
-        style={styles.separator}
-        lightColor="#eee"
-        darkColor="rgba(255,255,255,0.1)"
-      />
-      {/* TODO - only display if authed */}
-      <Pressable
-        disabled={!authed}
-        style={styles.loginButton}
-        onPress={() => {
-          console.log("test");
-          sendMessage("SYNC_LIB 0");
-          loaded = true;
-        }}
-      >
-        <Text style={styles.text}>Sync to Server</Text>
-      </Pressable>
+      <View style={styles.container}>
+        <TextInput
+          style={styles.input}
+          onChangeText={queueText}
+          value={queueUrl}
+        />
+
+        <Pressable
+          style={styles.loginButton}
+          onPress={() => {
+            console.log(queueUrl);
+            if (queueUrl.length > 5) {
+              console.log("h")
+              sendMessage("QUEUE " + queueUrl.toString().trim());
+            }
+          }}
+        >
+          <Text style={styles.text}>Queue Song</Text>
+        </Pressable>
+        <Text style={styles.title}>Browse Media</Text>
+        <View
+          style={styles.separator}
+          lightColor="#eee"
+          darkColor="rgba(255,255,255,0.1)"
+        />
+        {/* TODO - only display if authed */}
+        <Pressable
+          disabled={!authed}
+          style={styles.loginButton}
+          onPress={() => {
+            console.log("test");
+            sendMessage("SYNC_LIB 0");
+            loaded = true;
+          }}
+        >
+          <Text style={styles.text}>Sync to Server</Text>
+        </Pressable>
         <SongsView />
-    </View>
+      </View>
     </ScrollView>
   );
 }
@@ -167,14 +237,21 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
   },
   img: {
-    margin: "20px",
     height: "20vh",
-    padding: "20px",
-    width: "30vh"
+    width: "30vh",
   },
   text: {
     userSelect: "none",
     fontSize: 14,
+  },
+  input: {
+    userSelect: "none",
+    color: "#83a598",
+    borderColor: "#83a598",
+    height: 40,
+    margin: 12,
+    borderWidth: 1,
+    padding: 10,
   },
   loginButton: {
     marginBottom: "20px",
@@ -184,6 +261,15 @@ const styles = StyleSheet.create({
     textDecorationStyle: "lowercase",
   },
   songButton: {
+    
+  },
+  songContainer: {
+    backgroundColor: "#83a598",
+    borderColor: "#83a598",
+    margin: "2px",
+    width: "10vw",
+    display: "flex",
+    flexDirection: "row",
   },
   container: {
     flex: 1,
